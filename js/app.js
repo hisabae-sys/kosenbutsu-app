@@ -1,8 +1,8 @@
 import {
-  render, TEMPLATE, QR_KINDS, PHOTO_BOXES, ELEMENTS, FONTS, LABEL_FIELDS, DEFAULT_LABELS, styleAttr,
-} from './templates/komei-soto.js?v=4';
-import { removeDigitUnitSpaces, warnings, urlWarnings, DEFAULT_AGE_BASE_DATE } from './rules.js?v=4';
-import { SAMPLE } from './sample.js?v=4';
+  render, TEMPLATE, QR_KINDS, PHOTO_BOXES, FONTS, DEFAULT_LABELS,
+} from './templates/komei-soto.js?v=5';
+import { removeDigitUnitSpaces, warnings, urlWarnings, DEFAULT_AGE_BASE_DATE } from './rules.js?v=5';
+import { SAMPLE } from './sample.js?v=5';
 
 const DB_NAME = 'kosenbutsu';
 const STORE = 'drafts';
@@ -10,6 +10,7 @@ const DRAFT_KEY = 'komei-soto';
 const MAX_POLICIES = 5;
 const PX_PER_MM = 96 / 25.4;
 const MIN_FIT = 0.7; // 文字は7割まで自動で小さくする
+const DRAG_START_PX = 4; // これより動いたらドラッグとみなす
 
 // ---------- 保存（この端末のブラウザ内。ドライブ保存は次の段階） ----------
 function openDb() {
@@ -37,133 +38,74 @@ async function saveDraft(d) {
   } catch { /* 保存できない環境でも画面は動かす */ }
 }
 
-// ---------- 入力項目 ----------
-const policyFields = (i) => [
-  { key: `policies.${i}.title`, label: '見出し', type: 'textarea', rows: 2, hint: '改行で2行に分けます' },
-  { key: `policies.${i}.body`, label: '本文', type: 'textarea', rows: 4 },
-  { key: `policies.${i}.illust`, label: 'イラスト（任意）', type: 'photo' },
-];
-
-function contentGroups() {
-  return [
-    { group: '号・発行', items: [
-      { key: 'town', label: '市町名', placeholder: '徳島市' },
-      { key: 'season', label: '号', placeholder: '2026秋号' },
-      { key: 'vol', label: 'vol.（号数）', placeholder: '03' },
-      { key: 'issued', label: '発行年月', placeholder: '2026年10月' },
-    ] },
-    { group: '表紙', items: [
-      { key: 'name', label: '表示名', placeholder: 'こうめい花子' },
-      { key: 'rubyBase', label: 'ふりがなを付ける部分', placeholder: '花子', hint: '表示名のうち漢字の部分' },
-      { key: 'ruby', label: 'ふりがな', placeholder: 'はなこ' },
-      { key: 'catch', label: 'キャッチコピー', type: 'textarea', rows: 2, hint: '改行で行を分けます' },
-      { key: 'band', label: '縦の帯', placeholder: '公明党の政策推進力' },
-      { key: 'photos.face', label: '表紙の顔写真', type: 'photo' },
-      { key: 'photos.logo', label: '公明党ロゴ（画像）', type: 'photo', hint: '入れない場合は印刷時に空けます' },
-    ] },
-    { group: 'プロフィール面', items: [
-      { key: 'bubble', label: '吹き出しのキャッチ（縦書き）', type: 'textarea', rows: 3, hint: '1行が縦1列になります' },
-      { key: 'photos.full', label: '全身写真', type: 'photo' },
-    ] },
-    ...(data.policies || []).map((_, i) => ({ group: `政策${i + 1}`, policy: i, items: policyFields(i) })),
-    { group: 'プロフィール', items: [
-      { key: 'birth', label: '生年月日', type: 'date', hint: '年齢は自動で計算します' },
-      { key: 'ageBaseDate', label: '年齢を数える日', type: 'date', hint: `空欄なら ${DEFAULT_AGE_BASE_DATE}` },
-      { key: 'hometown', label: '出身地', placeholder: '徳島市' },
-      { key: 'schools', label: '学歴', type: 'textarea', rows: 4, hint: '1行に1校。「卒」「県立」などは自動でそろえます' },
-      { key: 'career', label: '職歴' },
-      { key: 'role', label: '党役職', list: 'roles' },
-      { key: 'term', label: '期数（現職のみ）', type: 'number', hint: '数字だけ。「（現在N期目）」になります' },
-      { key: 'license', label: '資格' },
-      { key: 'hobby', label: '趣味' },
-      { key: 'family', label: '家族' },
-      { key: 'motto', label: '座右の銘' },
-      { key: 'extra', label: 'その他の行', type: 'textarea', rows: 3, hint: '1行ずつ。行頭の○は自動で付きます' },
-    ] },
-    { group: 'QRコード', items: QR_KINDS.map((k) => ({ key: `qr.${k.key}`, label: `${k.label}のURL`, type: 'url' })) },
-    { group: '見出し・ラベル', items: LABEL_FIELDS.map((f) => ({ ...f, key: `labels.${f.key}`, placeholder: DEFAULT_LABELS[f.key] })) },
-  ];
-}
-
+// ---------- 入力項目（内容） ----------
+const F = (key, label, extra = {}) => ({ key, label, ...extra });
+const L = (key, label, extra = {}) => F(`labels.${key}`, label, { placeholder: DEFAULT_LABELS[key], ...extra });
 const ROLES = ['県代表', '県幹事長', '県副代表', '県青年局長', '県女性局長', '支部長', '副支部長'];
 
-const get = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
-function set(obj, path, value) {
-  const keys = path.split('.');
-  let o = obj;
-  keys.slice(0, -1).forEach((k, i) => {
-    if (o[k] == null) o[k] = /^\d+$/.test(keys[i + 1]) ? [] : {};
-    o = o[k];
-  });
-  o[keys[keys.length - 1]] = value;
-}
-const escAttr = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+// 一覧に並べる要素。styles はデザインを設定できる部品（プレビューの data-el）
+const PANEL = [
+  { group: '全体', items: [
+    { id: 'doc', label: '書類の設定（種類・用紙・色）', styles: [], doc: true },
+  ] },
+  { group: '表紙（右の面）', items: [
+    { id: 'title', label: '題字「公明ニュース」', styles: ['title', 'masthead'], fields: [L('titleA', '題字（前半）'), L('titleB', '題字（後半）')] },
+    { id: 'title-sub', label: '題字の英字', styles: ['title-sub'], fields: [L('titleSub', '英字')] },
+    { id: 'issue-tag', label: '号数', styles: ['issue-tag'], fields: [F('season', '号', { placeholder: '2026秋号' }), L('issuePrefix', '号数の前の文字'), F('vol', '号数', { placeholder: '03' })] },
+    { id: 'publisher', label: '発行元・発行年月', styles: ['publisher'], fields: [L('publisher', '発行元', { type: 'textarea', rows: 2 }), L('issuedPrefix', '発行年月の前の文字'), F('issued', '発行年月', { placeholder: '2026年10月' })] },
+    { id: 'cover-catch', label: 'キャッチコピー', styles: ['cover-catch'], fields: [F('catch', 'キャッチコピー', { type: 'textarea', rows: 2, hint: '改行で行を分けます' })] },
+    { id: 'band', label: '縦の帯', styles: ['band'], fields: [F('band', '帯の文字', { placeholder: '公明党の政策推進力' })] },
+    { id: 'tokushu-right', label: '特集ラベル（表紙）', styles: ['tokushu-right'], fields: [F('town', '市町名', { placeholder: '徳島市' }), L('tokushu', '特集ラベル', { hint: '空欄なら「市町名＋特集」', placeholder: '' })] },
+    { id: 'cover-name', label: '表紙の名前', styles: ['cover-name'], fields: [F('name', '表示名', { placeholder: 'こうめい花子' }), F('rubyBase', 'ふりがなを付ける部分', { placeholder: '花子', hint: '表示名のうち漢字の部分' }), F('ruby', 'ふりがな', { placeholder: 'はなこ' }), L('coverNo', '名前の後ろ'), L('coverChallenge', '横の列')] },
+    { id: 'photo-face', label: '表紙の顔写真', styles: ['photo-face'], fields: [F('photos.face', '顔写真', { type: 'photo' })] },
+    { id: 'circle', label: '白い円', styles: ['circle'] },
+    { id: 'logo', label: '公明党ロゴ', styles: ['logo'], fields: [F('photos.logo', 'ロゴの画像', { type: 'photo', hint: '入れない場合は印刷時に空けます' })] },
+  ] },
+  { group: 'プロフィール面（左の面）', items: [
+    { id: 'bubble', label: '吹き出し', styles: ['bubble'] },
+    { id: 'tokushu-left', label: '特集ラベル（プロフィール面）', styles: ['tokushu-left'], fields: [F('town', '市町名', { placeholder: '徳島市' }), L('tokushu', '特集ラベル', { hint: '空欄なら「市町名＋特集」', placeholder: '' })] },
+    { id: 'bubble-catch', label: '吹き出しのキャッチ', styles: ['bubble-catch'], fields: [F('bubble', 'キャッチ（縦書き）', { type: 'textarea', rows: 3, hint: '1行が縦1列になります' })] },
+    { id: 'photo-full', label: '全身写真', styles: ['photo-full'], fields: [F('photos.full', '全身写真', { type: 'photo' })] },
+    { id: 'challenge-head', label: '政策の見出し', styles: ['challenge-head'], fields: [F('name', '表示名'), L('challengeSuffix', '名前の後ろ')] },
+    { id: 'policies', label: '政策（チャレンジ）', styles: ['policy-no', 'policy-title', 'policy-body'], policies: true },
+    { id: 'profile-head', label: 'プロフィールの見出し', styles: ['profile-head'], fields: [F('name', '表示名'), L('profileSuffix', '名前の後ろ')] },
+    { id: 'profile', label: 'プロフィール', styles: ['profile'], fields: [
+      F('birth', '生年月日', { type: 'date', hint: '年齢は自動で計算します' }),
+      F('ageBaseDate', '年齢を数える日', { type: 'date', hint: `空欄なら ${DEFAULT_AGE_BASE_DATE}` }),
+      F('hometown', '出身地', { placeholder: '徳島市' }),
+      F('schools', '学歴', { type: 'textarea', rows: 4, hint: '1行に1校。「卒」「県立」などは自動でそろえます' }),
+      F('career', '職歴'),
+      F('role', '党役職', { list: 'roles' }),
+      F('term', '期数（現職のみ）', { type: 'number', hint: '数字だけ。「（現在N期目）」になります' }),
+      F('license', '資格'), F('hobby', '趣味'), F('family', '家族'), F('motto', '座右の銘'),
+      F('extra', 'その他の行', { type: 'textarea', rows: 3, hint: '1行ずつ。行頭の○は自動で付きます' }),
+    ] },
+    { id: 'qr-row', label: 'QRコード', styles: ['qr-row'], fields: QR_KINDS.map((k) => F(`qr.${k.key}`, `${k.label}のURL`, { type: 'url' })) },
+  ] },
+];
 
-let data = structuredClone(SAMPLE);
-let selected = null; // デザイン設定で選んでいる要素のid
-let activeTab = 'content';
-let zoom = 'fit';
-const photoSizes = {};
+const STYLE_LABELS = {
+  masthead: '題字の枠', 'policy-no': '数字', 'policy-title': '見出し文', 'policy-body': '本文',
+};
+const ITEMS = PANEL.flatMap((g) => g.items);
+const ITEM_OF_STYLE = Object.fromEntries(ITEMS.flatMap((it) => it.styles.map((s) => [s, it.id])));
+const TEXT_STYLES = new Set(['title', 'title-sub', 'issue-tag', 'publisher', 'cover-catch', 'band', 'tokushu-right', 'cover-name',
+  'tokushu-left', 'bubble-catch', 'challenge-head', 'policy-no', 'policy-title', 'policy-body', 'profile-head', 'profile']);
 
-function fieldHtml(f) {
-  const id = `f-${f.key.replace(/\./g, '-')}`;
-  const hint = f.hint ? `<small>${f.hint}</small>` : '';
-  if (f.type === 'photo') {
-    const has = get(data, f.key) ? '（入っています）' : '';
-    return `<div class="field"><label for="${id}">${f.label}<em>${has}</em></label>
-      <input type="file" accept="image/*" id="${id}" data-key="${f.key}">
-      <button type="button" class="small clear-photo" data-key="${f.key}">写真を外す</button>${hint}</div>`;
-  }
-  const common = `id="${id}" data-key="${f.key}" ${f.placeholder ? `placeholder="${escAttr(f.placeholder)}"` : ''}`;
-  const input = f.type === 'textarea'
-    ? `<textarea ${common} rows="${f.rows || 3}"></textarea>`
-    : `<input type="${f.type || 'text'}" ${common} ${f.list ? `list="${f.list}"` : ''}>`;
-  return `<div class="field"><label for="${id}">${f.label}</label>${input}${hint}</div>`;
-}
+const policyFields = (i) => [
+  F(`policies.${i}.title`, '見出し', { type: 'textarea', rows: 2, hint: '改行で2行に分けます' }),
+  F(`policies.${i}.body`, '本文', { type: 'textarea', rows: 4 }),
+  F(`policies.${i}.illust`, 'イラスト（任意）', { type: 'photo' }),
+];
 
-function bindInputs(root, onChange) {
-  root.querySelectorAll('[data-key]:not([type=file]):not(button)').forEach((el) => {
-    el.value = get(data, el.dataset.key) ?? '';
-    el.addEventListener('input', () => { set(data, el.dataset.key, el.value); onChange(); });
-  });
-  root.querySelectorAll('input[type=file]').forEach((el) => {
-    el.addEventListener('change', () => {
-      const file = el.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => { set(data, el.dataset.key, reader.result); buildContent(); update(); };
-      reader.readAsDataURL(file);
-    });
-  });
-  root.querySelectorAll('.clear-photo').forEach((b) => b.addEventListener('click', () => {
-    set(data, b.dataset.key, ''); buildContent(); update();
-  }));
-}
-
-function buildContent() {
-  const form = document.getElementById('tab-content');
-  form.innerHTML = contentGroups().map((g) => {
-    const remove = g.policy != null
-      ? `<button type="button" class="small danger remove-policy" data-i="${g.policy}">この政策を削除</button>` : '';
-    const add = g.policy === data.policies.length - 1 && data.policies.length < MAX_POLICIES
-      ? '<button type="button" class="add-policy">＋ 政策を追加</button>' : '';
-    return `<fieldset><legend>${g.group}</legend>${g.items.map(fieldHtml).join('')}${remove}</fieldset>${add}`;
-  }).join('')
-    + (data.policies.length ? '' : '<button type="button" class="add-policy">＋ 政策を追加</button>')
-    + `<datalist id="roles">${ROLES.map((r) => `<option value="${r}">`).join('')}</datalist>`;
-  bindInputs(form, update);
-  form.querySelectorAll('.add-policy').forEach((b) => b.addEventListener('click', () => {
-    data.policies.push({ title: '', body: '', illust: '' });
-    buildContent(); update();
-  }));
-  form.querySelectorAll('.remove-policy').forEach((b) => b.addEventListener('click', () => {
-    if (!confirm('この政策を削除します。よろしいですか？')) return;
-    data.policies.splice(Number(b.dataset.i), 1);
-    buildContent(); update();
-  }));
+function allFields() {
+  const out = [];
+  ITEMS.forEach((it) => (it.fields || []).forEach((f) => out.push({ ...f, where: it.label })));
+  (data.policies || []).forEach((_, i) => policyFields(i).forEach((f) => out.push({ ...f, where: `政策${i + 1}` })));
+  return out;
 }
 
-// ---------- デザイン設定 ----------
+// ---------- デザインの設定項目 ----------
 const STYLE_FIELDS = [
   { key: 'dx', label: '横の位置（右へ mm）', type: 'number', step: 0.5 },
   { key: 'dy', label: '縦の位置（下へ mm）', type: 'number', step: 0.5 },
@@ -179,128 +121,278 @@ const STYLE_FIELDS = [
   { key: 'align', label: '揃え', type: 'select', options: [{ value: '', label: '型のまま' }, { value: 'left', label: '左（上）' }, { value: 'center', label: '中央' }, { value: 'right', label: '右（下）' }], text: true },
   { key: 'lineHeight', label: '行間（倍）', type: 'number', step: 0.05, text: true },
   { key: 'letter', label: '字間（mm）', type: 'number', step: 0.1, text: true },
-  { key: 'hidden', label: 'この要素を表示しない', type: 'checkbox' },
+  { key: 'hidden', label: '表示しない', type: 'checkbox' },
 ];
+
+const get = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
+function set(obj, path, value) {
+  const keys = path.split('.');
+  let o = obj;
+  keys.slice(0, -1).forEach((k, i) => {
+    if (o[k] == null) o[k] = /^\d+$/.test(keys[i + 1]) ? [] : {};
+    o = o[k];
+  });
+  o[keys[keys.length - 1]] = value;
+}
+const escAttr = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+let data = structuredClone(SAMPLE);
+let openItem = null; // 開いている要素
+let focusPolicy = null; // 政策の何番目を押したか
+let zoom = 'fit';
+const photoSizes = {};
+
+// ---------- 入力欄の部品 ----------
+function fieldHtml(f) {
+  const id = `f-${f.key.replace(/\./g, '-')}`;
+  const hint = f.hint ? `<small>${f.hint}</small>` : '';
+  if (f.type === 'photo') {
+    const has = get(data, f.key);
+    return `<div class="field"><label for="${id}">${f.label}<em>${has ? '（入っています）' : ''}</em></label>
+      <input type="file" accept="image/*" id="${id}" data-key="${f.key}">
+      ${has ? `<button type="button" class="small clear-photo" data-key="${f.key}">外す</button>` : ''}${hint}</div>`;
+  }
+  const common = `id="${id}" data-key="${f.key}" ${f.placeholder ? `placeholder="${escAttr(f.placeholder)}"` : ''}`;
+  const input = f.type === 'textarea'
+    ? `<textarea ${common} rows="${f.rows || 3}"></textarea>`
+    : `<input type="${f.type || 'text'}" ${common} ${f.list ? `list="${f.list}"` : ''}>`;
+  return `<div class="field"><label for="${id}">${f.label}</label>${input}${hint}</div>`;
+}
+
+function bindFields(root) {
+  $$('[data-key]:not([type=file]):not(button)', root).forEach((el) => {
+    el.value = get(data, el.dataset.key) ?? '';
+    el.addEventListener('input', () => {
+      set(data, el.dataset.key, el.value);
+      // 同じ項目（市町名・表示名など）が別の要素の欄にもあればそろえる
+      $$(`#panel [data-key="${el.dataset.key}"]`).forEach((o) => { if (o !== el) o.value = el.value; });
+      update();
+    });
+  });
+  $$('input[type=file]', root).forEach((el) => el.addEventListener('change', () => {
+    const file = el.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { set(data, el.dataset.key, reader.result); refreshOpen(); update(); };
+    reader.readAsDataURL(file);
+  }));
+  $$('.clear-photo', root).forEach((b) => b.addEventListener('click', () => {
+    set(data, b.dataset.key, ''); refreshOpen(); update();
+  }));
+}
 
 function currentMm(el, prop) {
   if (!el) return '';
-  const cs = getComputedStyle(el);
-  const px = prop === 'width' ? el.offsetWidth : prop === 'height' ? el.offsetHeight : parseFloat(cs[prop]);
+  const px = prop === 'width' ? el.offsetWidth : prop === 'height' ? el.offsetHeight : parseFloat(getComputedStyle(el)[prop]);
   return (px / PX_PER_MM).toFixed(1);
 }
 
-function buildDesign() {
-  const pane = document.getElementById('tab-design');
-  const meta = ELEMENTS.find((e) => e.id === selected);
-  const st = (data.styles || {})[selected] || {};
-  const target = selected ? document.querySelector(`#sheet [data-el="${selected}"]`) : null;
-  const fields = meta ? STYLE_FIELDS.filter((f) => !f.text || meta.text).map((f) => {
-    const id = `s-${f.key}`;
+function styleSection(styleId, single) {
+  const st = (data.styles || {})[styleId] || {};
+  const target = $(`#sheet [data-el="${styleId}"]`);
+  const isText = TEXT_STYLES.has(styleId);
+  const rows = STYLE_FIELDS.filter((f) => !f.text || isText).map((f) => {
+    const id = `s-${styleId}-${f.key}`;
     const v = st[f.key] ?? '';
+    const attrs = `id="${id}" data-style="${styleId}" data-prop="${f.key}"`;
     if (f.type === 'select') {
-      return `<div class="field"><label for="${id}">${f.label}</label><select id="${id}" data-style="${f.key}">${f.options.map((o) => `<option value="${escAttr(o.value)}"${o.value === v ? ' selected' : ''}>${o.label}</option>`).join('')}</select></div>`;
+      return `<div class="field half"><label for="${id}">${f.label}</label><select ${attrs}>${f.options.map((o) => `<option value="${escAttr(o.value)}"${o.value === v ? ' selected' : ''}>${o.label}</option>`).join('')}</select></div>`;
     }
     if (f.type === 'checkbox') {
-      return `<div class="field check"><label><input type="checkbox" data-style="${f.key}"${v ? ' checked' : ''}> ${f.label}</label></div>`;
+      return `<div class="field half check"><label><input type="checkbox" ${attrs}${v ? ' checked' : ''}> ${f.label}</label></div>`;
     }
     if (f.type === 'color') {
-      return `<div class="field"><label for="${id}">${f.label}</label><div class="row"><input type="color" id="${id}" data-style="${f.key}" value="${v || '#000000'}"><span class="muted">${v ? v : '型のまま'}</span>${v ? `<button type="button" class="small unset" data-style="${f.key}">型のままに戻す</button>` : ''}</div></div>`;
+      return `<div class="field half"><label for="${id}">${f.label}</label><div class="row"><input type="color" ${attrs} value="${v || '#000000'}">${v ? `<button type="button" class="small unset" data-style="${styleId}" data-prop="${f.key}">型に戻す</button>` : '<span class="muted">型のまま</span>'}</div></div>`;
     }
     const ph = f.current ? currentMm(target, f.current) : '';
-    return `<div class="field"><label for="${id}">${f.label}</label><input type="number" inputmode="decimal" id="${id}" data-style="${f.key}" step="${f.step}" value="${escAttr(v)}" placeholder="${ph ? `いま ${ph}` : '型のまま'}"></div>`;
-  }).join('') : '';
+    return `<div class="field half"><label for="${id}">${f.label}</label><input type="number" inputmode="decimal" step="${f.step}" ${attrs} value="${escAttr(v)}" placeholder="${ph ? `いま ${ph}` : '型のまま'}"></div>`;
+  }).join('');
+  const changed = Object.keys(st).length ? ' ＊変更あり' : '';
+  const title = single ? 'デザイン' : `デザイン（${STYLE_LABELS[styleId] || styleId}）`;
+  return `<details class="design" data-style-section="${styleId}"${changed ? ' open' : ''}><summary>${title}<span class="changed">${changed}</span></summary>
+    <div class="grid">${rows}</div>
+    <button type="button" class="small reset-one" data-style="${styleId}">このデザインを標準に戻す</button></details>`;
+}
 
-  pane.innerHTML = `
-    <p class="muted">プレビューの文字や写真を押すと選べます。ドラッグで動かせます。</p>
-    <div class="field"><label for="el-select">設定する要素</label>
-      <select id="el-select"><option value="">（選んでください）</option>${ELEMENTS.map((e) => `<option value="${e.id}"${e.id === selected ? ' selected' : ''}>${e.label}${(data.styles || {})[e.id] ? ' ＊' : ''}</option>`).join('')}</select>
-      <small>＊は変更している要素です</small></div>
-    ${meta ? `<fieldset><legend>${meta.label}</legend>${fields}
-      <button type="button" class="reset-one">この要素を標準に戻す</button></fieldset>` : ''}
-    <button type="button" class="danger reset-all">すべてのデザインを標準に戻す</button>`;
-
-  pane.querySelector('#el-select').addEventListener('change', (e) => select(e.target.value || null));
-  pane.querySelectorAll('[data-style]').forEach((el) => {
+function bindStyles(root) {
+  $$('[data-prop]', root).forEach((el) => {
     if (el.classList.contains('unset')) {
-      el.addEventListener('click', () => { setStyle(el.dataset.style, ''); buildDesign(); });
+      el.addEventListener('click', () => { setStyle(el.dataset.style, el.dataset.prop, ''); refreshOpen(); });
       return;
     }
     const ev = el.tagName === 'SELECT' || el.type === 'checkbox' || el.type === 'color' ? 'change' : 'input';
     el.addEventListener(ev, () => {
-      setStyle(el.dataset.style, el.type === 'checkbox' ? el.checked : el.value);
-      if (el.type === 'color' || el.type === 'checkbox') buildDesign();
+      setStyle(el.dataset.style, el.dataset.prop, el.type === 'checkbox' ? el.checked : el.value);
+      if (el.type !== 'number') refreshOpen();
     });
+    if (el.type === 'color') el.addEventListener('input', () => setStyle(el.dataset.style, el.dataset.prop, el.value));
   });
-  pane.querySelector('.reset-one')?.addEventListener('click', () => {
-    delete data.styles[selected]; update(); buildDesign();
-  });
-  pane.querySelector('.reset-all').addEventListener('click', () => {
-    if (!confirm('すべての要素のデザイン設定を標準に戻します。入力した文字はそのままです。よろしいですか？')) return;
-    data.styles = {}; update(); buildDesign();
-  });
+  $$('.reset-one', root).forEach((b) => b.addEventListener('click', () => {
+    delete data.styles[b.dataset.style]; update(); refreshOpen();
+  }));
 }
 
-function setStyle(key, value) {
+function setStyle(styleId, key, value) {
   data.styles = data.styles || {};
-  const st = { ...(data.styles[selected] || {}) };
+  const st = { ...(data.styles[styleId] || {}) };
   if (value === '' || value === false) delete st[key]; else st[key] = value;
-  if (Object.keys(st).length) data.styles[selected] = st; else delete data.styles[selected];
+  if (Object.keys(st).length) data.styles[styleId] = st; else delete data.styles[styleId];
   update();
 }
 
-function select(id) {
-  selected = id;
-  document.querySelectorAll('#sheet .selected').forEach((n) => n.classList.remove('selected'));
-  if (id) document.querySelectorAll(`#sheet [data-el="${id}"]`).forEach((n) => n.classList.add('selected'));
-  buildDesign();
+// ---------- 要素ごとの編集欄 ----------
+function docBody() {
+  const color = (id, key, def, label) => `<div class="field"><label for="${id}">${label}</label>
+    <div class="row"><input type="color" id="${id}" data-doc="${key}" value="${data[key] || def}">
+    ${data[key] ? `<button type="button" class="small" data-doc-reset="${key}">標準に戻す</button>` : '<span class="muted">標準</span>'}</div></div>`;
+  return `
+    <div class="field"><label for="doc-type">発行物の種類</label>
+      <select id="doc-type">
+        <option value="komei-soto" selected>公明ニュース 外面</option>
+        <option disabled>公明ニュース 中面（準備中）</option>
+        <option disabled>後援会通信（かじわら一哉通信の型・準備中）</option>
+      </select></div>
+    <p class="muted">用紙：${TEMPLATE.paper}。塗り足し ${TEMPLATE.bleed}mm を含めた ${TEMPLATE.width + TEMPLATE.bleed * 2}×${TEMPLATE.height + TEMPLATE.bleed * 2}mm で出力します。</p>
+    <div class="field check"><label><input type="checkbox" id="show-trim"${data.print?.showTrim ? ' checked' : ''}> プレビューに仕上がり線と折り線を出す（印刷には出ません）</label></div>
+    ${color('theme', 'theme', '#2fb5a3', 'テーマ色（題字・見出し・帯・背景の斜線など）')}
+    ${color('stripe-a', 'stripeA', '#b8e3dd', '背景の斜線の色（標準はテーマ色に合わせる）')}
+    ${color('stripe-b', 'stripeB', '#e6f5f2', '背景の地の色（標準はテーマ色に合わせる）')}
+    <button type="button" class="danger reset-all">すべてのデザインを標準に戻す</button>`;
 }
 
-// ---------- 書類の設定 ----------
-function buildSettings() {
-  const pane = document.getElementById('tab-settings');
-  pane.innerHTML = `
-    <fieldset><legend>種類</legend>
-      <div class="field"><label for="doc-type">発行物</label>
-        <select id="doc-type">
-          <option value="komei-soto" selected>公明ニュース 外面</option>
-          <option disabled>公明ニュース 中面（準備中）</option>
-          <option disabled>後援会通信（かじわら一哉通信の型・準備中）</option>
-        </select></div>
-    </fieldset>
-    <fieldset><legend>用紙・印刷</legend>
-      <p>${TEMPLATE.paper}</p>
-      <p>塗り足し ${TEMPLATE.bleed}mm を含めた ${TEMPLATE.width + TEMPLATE.bleed * 2}×${TEMPLATE.height + TEMPLATE.bleed * 2}mm で出力します。</p>
-      <div class="field check"><label><input type="checkbox" id="show-trim"${data.print?.showTrim ? ' checked' : ''}> プレビューに仕上がり線と折り線を出す（印刷には出ません）</label></div>
-    </fieldset>
-    <fieldset><legend>色</legend>
-      <div class="field"><label for="theme">テーマ色（題字・見出し・帯・背景の斜線などの色）</label>
-        <div class="row"><input type="color" id="theme" value="${data.theme || '#2fb5a3'}">
-        <button type="button" class="small" id="theme-reset">標準に戻す</button></div></div>
-      <div class="field"><label for="stripe-a">背景の斜線の色</label>
-        <div class="row"><input type="color" id="stripe-a" value="${data.stripeA || '#b8e3dd'}"><span class="muted">${data.stripeA ? '' : 'テーマ色に合わせる'}</span>
-        <button type="button" class="small" id="stripe-a-reset">標準に戻す</button></div></div>
-      <div class="field"><label for="stripe-b">背景の地の色（斜線の間）</label>
-        <div class="row"><input type="color" id="stripe-b" value="${data.stripeB || '#e6f5f2'}"><span class="muted">${data.stripeB ? '' : 'テーマ色に合わせる'}</span>
-        <button type="button" class="small" id="stripe-b-reset">標準に戻す</button></div></div>
-    </fieldset>`;
-  pane.querySelector('#show-trim').addEventListener('change', (e) => { set(data, 'print.showTrim', e.target.checked); update(); });
-  pane.querySelector('#theme').addEventListener('input', (e) => { data.theme = e.target.value; update(); });
-  pane.querySelector('#theme-reset').addEventListener('click', () => { data.theme = ''; buildSettings(); update(); });
-  [['stripe-a', 'stripeA'], ['stripe-b', 'stripeB']].forEach(([id, key]) => {
-    pane.querySelector(`#${id}`).addEventListener('input', (e) => { data[key] = e.target.value; update(); });
-    pane.querySelector(`#${id}`).addEventListener('change', () => buildSettings());
-    pane.querySelector(`#${id}-reset`).addEventListener('click', () => { data[key] = ''; buildSettings(); update(); });
+function bindDoc(root) {
+  $('#show-trim', root).addEventListener('change', (e) => { set(data, 'print.showTrim', e.target.checked); update(); });
+  $$('[data-doc]', root).forEach((el) => {
+    el.addEventListener('input', () => { data[el.dataset.doc] = el.value; update(); });
+    el.addEventListener('change', () => refreshOpen());
+  });
+  $$('[data-doc-reset]', root).forEach((b) => b.addEventListener('click', () => { data[b.dataset.docReset] = ''; refreshOpen(); update(); }));
+  $('.reset-all', root).addEventListener('click', () => {
+    if (!confirm('すべての要素のデザインと色を標準に戻します。入力した文字はそのままです。よろしいですか？')) return;
+    data.styles = {}; data.theme = ''; data.stripeA = ''; data.stripeB = '';
+    refreshOpen(); update();
   });
 }
 
-function switchTab(name) {
-  activeTab = name;
-  document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
-  document.querySelectorAll('.tab').forEach((t) => { t.hidden = t.id !== `tab-${name}`; });
-  document.getElementById('sheet').classList.toggle('design', name === 'design');
-  if (name === 'design') buildDesign();
-  if (name !== 'design') select(null);
-  document.getElementById('quick-edit').hidden = true;
+function policiesBody() {
+  const list = (data.policies || []).map((_, i) => `
+    <fieldset class="policy-set${focusPolicy === i ? ' focus' : ''}" data-policy="${i}"><legend>政策${i + 1}</legend>
+      ${policyFields(i).map(fieldHtml).join('')}
+      <button type="button" class="small danger remove-policy" data-i="${i}">この政策を削除</button></fieldset>`).join('');
+  const add = data.policies.length < MAX_POLICIES ? '<button type="button" class="add-policy">＋ 政策を追加</button>' : '';
+  return list + add;
+}
+
+function itemBody(it) {
+  if (it.doc) return docBody();
+  const content = it.policies ? policiesBody() : (it.fields || []).map(fieldHtml).join('');
+  const designs = it.styles.map((s) => styleSection(s, it.styles.length === 1)).join('');
+  return content + designs;
+}
+
+function bindItem(root, it) {
+  if (it.doc) { bindDoc(root); return; }
+  bindFields(root);
+  bindStyles(root);
+  $$('.add-policy', root).forEach((b) => b.addEventListener('click', () => {
+    data.policies.push({ title: '', body: '', illust: '' });
+    focusPolicy = data.policies.length - 1;
+    refreshOpen(); update();
+  }));
+  $$('.remove-policy', root).forEach((b) => b.addEventListener('click', () => {
+    if (!confirm('この政策を削除します。よろしいですか？')) return;
+    data.policies.splice(Number(b.dataset.i), 1);
+    focusPolicy = null;
+    refreshOpen(); update();
+  }));
+}
+
+function buildPanel() {
+  const panel = $('#panel');
+  panel.innerHTML = PANEL.map((g) => `
+    <section class="group"><h2>${g.group}</h2>
+      ${g.items.map((it) => `
+        <div class="item${openItem === it.id ? ' open' : ''}" data-item="${it.id}">
+          <button type="button" class="item-head" data-item="${it.id}">
+            <span>${it.label}</span>${it.styles.some((s) => (data.styles || {})[s]) ? '<span class="changed">＊</span>' : ''}
+            <span class="chev">${openItem === it.id ? '▲' : '▼'}</span></button>
+          ${openItem === it.id ? `<div class="item-body">${itemBody(it)}</div>` : ''}
+        </div>`).join('')}
+    </section>`).join('')
+    + `<datalist id="roles">${ROLES.map((r) => `<option value="${r}">`).join('')}</datalist>`;
+  $$('.item-head', panel).forEach((h) => {
+    h.addEventListener('click', () => openPanelItem(openItem === h.dataset.item ? null : h.dataset.item));
+    h.addEventListener('mouseenter', () => highlight(h.dataset.item, true));
+    h.addEventListener('mouseleave', () => highlight(h.dataset.item, false));
+  });
+  const it = ITEMS.find((x) => x.id === openItem);
+  if (it) bindItem($('.item.open .item-body', panel), it);
+}
+
+function refreshOpen() {
+  const scroll = $('.editor').scrollTop;
+  buildPanel();
+  $('.editor').scrollTop = scroll;
+  markSelection();
+}
+
+function openPanelItem(id, { scroll = false, policy = null } = {}) {
+  openItem = id;
+  focusPolicy = policy;
+  buildPanel();
+  markSelection();
+  if (!id) return;
+  const node = $(`.item[data-item="${id}"]`);
+  if (scroll) {
+    const target = (policy != null && $(`.policy-set[data-policy="${policy}"]`)) || node;
+    if (isNarrow()) {
+      // スマホでは上に固定したプレビューの下に来るようにずらす
+      const top = $('.preview').getBoundingClientRect().bottom + 8;
+      window.scrollBy({ top: target.getBoundingClientRect().top - top, behavior: 'smooth' });
+    } else {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+  const first = $(`.item[data-item="${id}"] ${policy != null ? `.policy-set[data-policy="${policy}"] ` : ''}textarea, .item[data-item="${id}"] input:not([type=file]):not([type=checkbox]):not([type=color])`);
+  // スマホでキーボードが勝手に開かないよう、PCのときだけ入力欄に移る
+  if (first && !isNarrow()) first.focus({ preventScroll: true });
+}
+
+// ---------- プレビューでの強調・選択枠 ----------
+function stylesOf(itemId) {
+  return ITEMS.find((x) => x.id === itemId)?.styles || [];
+}
+
+function highlight(itemId, on) {
+  stylesOf(itemId).forEach((s) => $$(`#sheet [data-el="${s}"]`).forEach((n) => n.classList.toggle('hl', on)));
+}
+
+function markSelection() {
+  $$('#sheet .selected').forEach((n) => n.classList.remove('selected'));
+  const handle = $('#sel-handle');
+  if (handle) handle.remove();
+  if (!openItem) return;
+  const ids = stylesOf(openItem);
+  ids.forEach((s) => $$(`#sheet [data-el="${s}"]`).forEach((n) => n.classList.add('selected')));
+  // 大きさを変えるつまみは、部品が1つだけの要素に付ける
+  const own = $$(`#sheet [data-el="${ids[0]}"]`);
+  if (own.length !== 1) return;
+  const sheet = $('#sheet');
+  const s = sheetScale();
+  const r = own[0].getBoundingClientRect();
+  const sr = sheet.getBoundingClientRect();
+  const h = document.createElement('div');
+  h.id = 'sel-handle';
+  h.className = 'sel-handle';
+  h.title = 'ドラッグで大きさを変える';
+  h.dataset.style = ids[0];
+  h.style.left = `${(r.right - sr.left) / s}px`;
+  h.style.top = `${(r.bottom - sr.top) / s}px`;
+  h.style.width = h.style.height = `${(isNarrow() ? 28 : 16) / s}px`;
+  h.style.borderWidth = `${2 / s}px`;
+  sheet.appendChild(h);
 }
 
 function makeQr(url) {
@@ -313,7 +405,7 @@ function makeQr(url) {
 // ---------- 文字が枠に収まるよう自動で小さくする ----------
 function overflows(el) {
   if (el.dataset.fit === '政策') {
-    return [...el.querySelectorAll('.policy')].some((p) => p.scrollHeight > p.clientHeight + 1) || el.scrollHeight > el.clientHeight + 1;
+    return $$('.policy', el).some((p) => p.scrollHeight > p.clientHeight + 1) || el.scrollHeight > el.clientHeight + 1;
   }
   return el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
 }
@@ -321,7 +413,7 @@ function overflows(el) {
 function autoFit(sheet) {
   const shrunk = [];
   const over = [];
-  sheet.querySelectorAll('[data-fit]').forEach((el) => {
+  $$('[data-fit]', sheet).forEach((el) => {
     if (el.tagName === 'IMG' || el.classList.contains('photo-empty')) return;
     let fit = 1;
     el.style.setProperty('--fit', fit);
@@ -336,20 +428,16 @@ function autoFit(sheet) {
 }
 
 // ---------- チェック ----------
-function textFields() {
-  const out = [];
-  contentGroups().forEach((g) => g.items.forEach((f) => {
-    if (['photo', 'date', 'number', 'url'].includes(f.type)) return;
-    out.push({ label: `${g.group}・${f.label}`, value: String(get(data, f.key) ?? '') });
-  }));
-  return out;
-}
-
 function collectChecks(fit) {
   const fixed = [];
   const notes = [];
-  textFields().forEach(({ label, value }) => {
+  const seen = new Set();
+  allFields().forEach((f) => {
+    if (['photo', 'date', 'number', 'url'].includes(f.type) || seen.has(f.key)) return;
+    seen.add(f.key);
+    const value = String(get(data, f.key) ?? '');
     if (!value) return;
+    const label = `${f.where}・${f.label}`;
     if (/[!?]/.test(value)) fixed.push(`${label}：半角の「!」「?」を全角にしました`);
     if (removeDigitUnitSpaces(value) !== value) fixed.push(`${label}：数字と単位の間のスペースを取りました`);
     notes.push(...warnings(label, value));
@@ -369,20 +457,21 @@ function collectChecks(fit) {
 }
 
 function showChecks({ fixed, notes }) {
-  const el = document.getElementById('checks');
+  const el = $('#checks');
+  const wasOpen = el.open;
   const li = (s) => `<li>${s}</li>`;
-  el.innerHTML = (notes.length
-    ? `<summary class="warn">確認してください（${notes.length}件）</summary><ul>${notes.map(li).join('')}</ul>`
-    : '<summary class="ok">注意はありません</summary>')
-    + (fixed.length ? `<h3>自動で直したところ（${fixed.length}件）</h3><ul>${fixed.map(li).join('')}</ul>` : '');
+  el.innerHTML = `<summary class="${notes.length ? 'warn' : 'ok'}">${notes.length ? `確認してください（${notes.length}件）` : '注意はありません'}${fixed.length ? `・自動で直したところ ${fixed.length}件` : ''}</summary>`
+    + (notes.length ? `<ul>${notes.map(li).join('')}</ul>` : '')
+    + (fixed.length ? `<h3>自動で直したところ</h3><ul>${fixed.map(li).join('')}</ul>` : '');
+  el.open = wasOpen;
 }
 
 // ---------- プレビュー ----------
 const isNarrow = () => window.matchMedia('(max-width: 860px)').matches;
 
 function sheetScale() {
-  const wrap = document.getElementById('preview-wrap');
-  const sheet = document.getElementById('sheet');
+  const wrap = $('#preview-wrap');
+  const sheet = $('#sheet');
   const byWidth = (wrap.clientWidth - 2) / sheet.offsetWidth;
   // スマホは幅に合わせる。PCは画面の高さにも収める
   const fit = isNarrow() ? byWidth : Math.min(byWidth, (wrap.clientHeight - 2) / sheet.offsetHeight);
@@ -390,142 +479,135 @@ function sheetScale() {
 }
 
 function fitPreview() {
-  const sheet = document.getElementById('sheet');
-  const sizer = document.getElementById('sizer');
+  const sheet = $('#sheet');
+  const sizer = $('#sizer');
+  const wrap = $('#preview-wrap');
   const scale = sheetScale();
   sheet.style.transform = `scale(${scale})`;
   sizer.style.width = `${sheet.offsetWidth * scale}px`;
   sizer.style.height = `${sheet.offsetHeight * scale}px`;
-  document.getElementById('zoom-label').textContent = `${Math.round(scale * 100)}%`;
+  $('#zoom-label').textContent = `${Math.round(scale * 100)}%`;
   if (isNarrow()) {
-    const wrap = document.getElementById('preview-wrap');
     wrap.style.height = `${Math.min(sheet.offsetHeight * Math.min(scale, (wrap.clientWidth - 2) / sheet.offsetWidth) + 2, window.innerHeight * 0.45)}px`;
   } else {
-    document.getElementById('preview-wrap').style.height = '';
+    wrap.style.height = '';
   }
 }
 
 function setZoom(z) {
   zoom = z === 'fit' ? 'fit' : Math.min(3, Math.max(0.15, z));
   fitPreview();
+  markSelection();
 }
 
 let timer;
 function update() {
   clearTimeout(timer);
   timer = setTimeout(async () => {
-    const sheet = document.getElementById('sheet');
+    const sheet = $('#sheet');
     sheet.innerHTML = render(data, { makeQr });
     sheet.classList.toggle('show-trim', !!data.print?.showTrim);
     // 色の設定は用紙全体（背景の斜線を含む）にかける
     [['--teal', data.theme], ['--stripe-a', data.stripeA], ['--stripe-b', data.stripeB]].forEach(([name, v]) => {
       if (v) sheet.style.setProperty(name, v); else sheet.style.removeProperty(name);
     });
-    await Promise.all([...sheet.querySelectorAll('img')].map((img) => (img.complete ? null : new Promise((r) => { img.onload = img.onerror = r; }))));
+    await Promise.all($$('img', sheet).map((img) => (img.complete ? null : new Promise((r) => { img.onload = img.onerror = r; }))));
     Object.keys(PHOTO_BOXES).forEach((key) => {
-      const img = sheet.querySelector(`.photo-${key}`);
+      const img = $(`.photo-${key}`, sheet);
       photoSizes[key] = img && img.tagName === 'IMG' ? { w: img.naturalWidth, h: img.naturalHeight } : null;
     });
     await document.fonts.ready;
     const fit = autoFit(sheet);
     fitPreview();
-    if (selected) document.querySelectorAll(`#sheet [data-el="${selected}"]`).forEach((n) => n.classList.add('selected'));
+    markSelection();
     showChecks(collectChecks(fit));
     saveDraft(data);
   }, 120);
 }
 
-// ---------- プレビュー上での選択とドラッグ ----------
-function initDrag() {
-  const sheet = document.getElementById('sheet');
+// ---------- プレビューを押す・ドラッグする ----------
+function initPointer() {
+  const sheet = $('#sheet');
+  const wrap = $('#preview-wrap');
   let drag = null;
+  // 要素を押した直後の click（つかんだ要素ではなく #sheet に届く）で選択が外れないようにする
+  let swallowClick = false;
+
   sheet.addEventListener('pointerdown', (e) => {
-    if (activeTab !== 'design') return;
+    const handle = e.target.closest('.sel-handle');
     const target = e.target.closest('[data-el]');
-    if (!target) return;
+    if (!handle && !target) return;
+    const styleId = handle ? handle.dataset.style : target.dataset.el;
+    const itemId = ITEM_OF_STYLE[styleId];
+    // スマホでは、選んでいない要素の上で指を動かしたら画面のスクロールにする
+    if (!handle && e.pointerType === 'touch' && openItem !== itemId) return;
     e.preventDefault();
-    const id = target.dataset.el;
-    if (id !== selected) select(id);
-    const st = (data.styles || {})[id] || {};
-    drag = { id, x: e.clientX, y: e.clientY, dx: Number(st.dx) || 0, dy: Number(st.dy) || 0, moved: false };
+    const st = (data.styles || {})[styleId] || {};
+    const node = handle ? $(`#sheet [data-el="${styleId}"]`) : target;
+    drag = {
+      styleId, itemId, x: e.clientX, y: e.clientY, moved: false, resize: !!handle,
+      dx: Number(st.dx) || 0, dy: Number(st.dy) || 0,
+      w: node.offsetWidth / PX_PER_MM, h: node.offsetHeight / PX_PER_MM,
+      policy: target?.closest('.policy') ? $$('.policy', sheet).indexOf(target.closest('.policy')) : null,
+    };
     sheet.setPointerCapture(e.pointerId);
   });
+
   sheet.addEventListener('pointermove', (e) => {
     if (!drag) return;
+    if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < DRAG_START_PX) return;
+    if (!drag.moved && !drag.resize && openItem !== drag.itemId) openPanelItem(drag.itemId);
+    drag.moved = true;
     const k = 1 / sheetScale() / PX_PER_MM;
-    const dx = Math.round((drag.dx + (e.clientX - drag.x) * k) * 2) / 2;
-    const dy = Math.round((drag.dy + (e.clientY - drag.y) * k) * 2) / 2;
-    if (dx === drag.nx && dy === drag.ny) return;
-    drag.nx = dx; drag.ny = dy; drag.moved = true;
-    const st = { ...((data.styles || {})[drag.id] || {}), dx, dy };
-    // 動かしている間は再描画せず、位置だけ変える
-    document.querySelectorAll(`#sheet [data-el="${drag.id}"]`).forEach((n) => {
-      n.style.translate = styleAttr(st).match(/translate:([^;"]+)/)?.[1] || '';
-    });
+    const mx = (e.clientX - drag.x) * k;
+    const my = (e.clientY - drag.y) * k;
+    const half = (v) => Math.round(v * 2) / 2;
+    const nodes = $$(`#sheet [data-el="${drag.styleId}"]`);
+    if (drag.resize) {
+      drag.nw = Math.max(5, half(drag.w + mx));
+      drag.nh = Math.max(5, half(drag.h + my));
+      nodes.forEach((n) => { n.style.width = `${drag.nw}mm`; n.style.height = `${drag.nh}mm`; });
+    } else {
+      drag.nx = half(drag.dx + mx);
+      drag.ny = half(drag.dy + my);
+      nodes.forEach((n) => { n.style.translate = `${drag.nx}mm ${drag.ny}mm`; });
+    }
+    const h = $('#sel-handle');
+    if (h) h.style.display = 'none';
   });
+
   const end = () => {
-    if (drag?.moved) {
+    if (!drag) return;
+    swallowClick = true;
+    setTimeout(() => { swallowClick = false; }, 0);
+    if (drag.moved) {
       data.styles = data.styles || {};
-      data.styles[drag.id] = { ...(data.styles[drag.id] || {}), dx: drag.nx, dy: drag.ny };
-      update(); buildDesign();
+      const st = { ...(data.styles[drag.styleId] || {}) };
+      if (drag.resize) { st.w = drag.nw; st.h = drag.nh; } else { st.dx = drag.nx; st.dy = drag.ny; }
+      data.styles[drag.styleId] = st;
+      update(); refreshOpen();
+    } else if (!drag.resize) {
+      openPanelItem(drag.itemId, { scroll: true, policy: drag.policy });
     }
     drag = null;
   };
   sheet.addEventListener('pointerup', end);
-  sheet.addEventListener('pointercancel', end);
-}
+  sheet.addEventListener('pointercancel', () => { drag = null; update(); });
 
-// ---------- プレビューから編集（「内容」タブのとき） ----------
-function findField(key) {
-  for (const g of contentGroups()) {
-    const f = g.items.find((it) => it.key === key);
-    if (f) return { ...f, group: g.group };
-  }
-  return null;
-}
-
-function focusGroup(name) {
-  const legend = [...document.querySelectorAll('#tab-content legend')].find((l) => l.textContent === name);
-  if (!legend) return;
-  legend.parentElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  legend.parentElement.classList.add('flash');
-  setTimeout(() => legend.parentElement.classList.remove('flash'), 1200);
-}
-
-function openQuickEdit(key) {
-  if (key.startsWith('@')) { focusGroup(key.slice(1)); return; }
-  const f = findField(key);
-  if (!f) return;
-  const formEl = document.getElementById(`f-${key.replace(/\./g, '-')}`);
-  if (f.type === 'photo') { formEl?.click(); return; }
-  const box = document.getElementById('quick-edit');
-  const area = box.querySelector('textarea');
-  box.querySelector('label').textContent = `${f.group}・${f.label}`;
-  area.value = get(data, key) ?? '';
-  area.placeholder = f.placeholder || '';
-  area.rows = f.type === 'textarea' ? (f.rows || 3) + 1 : 2;
-  box.hidden = false;
-  area.focus();
-  area.oninput = () => {
-    set(data, key, area.value);
-    if (formEl) formEl.value = area.value;
-    update();
-  };
-  box.querySelector('.qe-form').onclick = () => {
-    box.hidden = true;
-    formEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    formEl?.focus({ preventScroll: true });
-  };
-}
-
-function initQuickEdit() {
-  const box = document.getElementById('quick-edit');
-  box.querySelector('.qe-close').addEventListener('click', () => { box.hidden = true; });
-  document.getElementById('sheet').addEventListener('click', (e) => {
-    if (activeTab === 'design') return;
-    const t = e.target.closest('[data-edit]');
-    if (t) openQuickEdit(t.dataset.edit);
+  // 何もない所を押したら選択を外す
+  wrap.addEventListener('click', (e) => {
+    if (swallowClick) return;
+    // スマホで選んでいない要素を軽く押したとき（pointerdown では受けない）はここで開く
+    const target = e.target.closest('#sheet [data-el]');
+    if (target) {
+      const pol = target.closest('.policy');
+      openPanelItem(ITEM_OF_STYLE[target.dataset.el], { scroll: true, policy: pol ? $$('.policy', sheet).indexOf(pol) : null });
+    } else if (!e.target.closest('.sel-handle') && openItem) {
+      openPanelItem(null);
+    }
   });
+  // スマホで要素を選んでいる間は、その要素の上ではスクロールしない
+  sheet.addEventListener('touchmove', (e) => { if (drag) e.preventDefault(); }, { passive: false });
 }
 
 function download(name, text) {
@@ -541,44 +623,41 @@ function loadData(d) {
   data.policies = Array.isArray(data.policies) ? data.policies : [];
   data.styles = data.styles || {};
   data.labels = data.labels || {};
-  selected = null;
-  buildContent(); buildSettings(); if (activeTab === 'design') buildDesign();
+  openItem = null;
+  buildPanel();
   update();
 }
 
 async function init() {
   const saved = await loadDraft();
-  document.getElementById('sheet').style.width = `${TEMPLATE.width + TEMPLATE.bleed * 2}mm`;
-  document.getElementById('sheet').style.height = `${TEMPLATE.height + TEMPLATE.bleed * 2}mm`;
-  document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
-  document.getElementById('btn-print').addEventListener('click', () => { select(null); window.print(); });
-  document.getElementById('btn-sample').addEventListener('click', () => {
+  $('#sheet').style.width = `${TEMPLATE.width + TEMPLATE.bleed * 2}mm`;
+  $('#sheet').style.height = `${TEMPLATE.height + TEMPLATE.bleed * 2}mm`;
+  $('#btn-print').addEventListener('click', () => { openPanelItem(null); window.print(); });
+  $('#btn-sample').addEventListener('click', () => {
     if (!confirm('入力中の内容とデザイン設定を、見本に置き換えます。よろしいですか？')) return;
     loadData(structuredClone(SAMPLE));
   });
-  document.getElementById('btn-export').addEventListener('click', () => download(`${data.name || '原稿'}_公明ニュース外面.json`, JSON.stringify(data)));
-  document.getElementById('btn-import').addEventListener('change', (e) => {
+  $('#btn-export').addEventListener('click', () => download(`${data.name || '原稿'}_公明ニュース外面.json`, JSON.stringify(data)));
+  $('#btn-import').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
     file.text().then((t) => loadData(JSON.parse(t)));
   });
-  document.getElementById('zoom-in').addEventListener('click', () => setZoom(sheetScale() * 1.25));
-  document.getElementById('zoom-out').addEventListener('click', () => setZoom(sheetScale() / 1.25));
-  document.getElementById('zoom-fit').addEventListener('click', () => setZoom('fit'));
-  document.getElementById('preview-wrap').addEventListener('wheel', (e) => {
+  $('#zoom-in').addEventListener('click', () => setZoom(sheetScale() * 1.25));
+  $('#zoom-out').addEventListener('click', () => setZoom(sheetScale() / 1.25));
+  $('#zoom-fit').addEventListener('click', () => setZoom('fit'));
+  $('#preview-wrap').addEventListener('wheel', (e) => {
     if (!e.ctrlKey) return;
     e.preventDefault();
     setZoom(sheetScale() * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
   }, { passive: false });
-  document.getElementById('toggle-preview').addEventListener('click', () => {
+  $('#toggle-preview').addEventListener('click', () => {
     document.body.classList.toggle('preview-collapsed');
     fitPreview();
   });
-  window.addEventListener('resize', fitPreview);
-  initDrag();
-  initQuickEdit();
+  window.addEventListener('resize', () => { fitPreview(); markSelection(); });
+  initPointer();
   loadData(saved || structuredClone(SAMPLE));
-  switchTab('content');
 }
 
 init();

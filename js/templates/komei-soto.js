@@ -3,7 +3,7 @@
 // 文字や写真のまとまりには data-el を付け、要素ごとの設定（styles）を重ねられるようにしている。
 import {
   autoFix, birthLine, educationText, termText, normalizeProfileMark, PROFILE_SEP,
-} from '../rules.js?v=4';
+} from '../rules.js?v=5';
 
 export const TEMPLATE = {
   id: 'komei-soto',

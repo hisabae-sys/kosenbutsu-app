@@ -143,7 +143,7 @@
   content: ''; position: absolute; right: 0; top: 0; bottom: 0; border-right: 0.2mm dashed #e0457b; z-index: 3;
 }
 /* デザイン設定中の要素の枠 */
-.sheet.design [data-el] { cursor: move; }
-.sheet.design [data-el]:hover { outline: 0.3mm dashed #3b82f6; }
-.sheet [data-el].selected { outline: 0.5mm solid #3b82f6 !important; }
-.sheet.design { touch-action: none; }
+.sheet [data-el] { cursor: pointer; }
+.sheet [data-el]:hover, .sheet [data-el].hl { outline: 0.4mm dashed #f59e0b; }
+.sheet [data-el].selected { outline: 0.5mm solid #3b82f6 !important; cursor: move; touch-action: none; }
+.sel-handle { position: absolute; z-index: 50; transform: translate(-50%, -50%); background: #3b82f6; border: 2px solid #fff; border-radius: 2px; cursor: nwse-resize; touch-action: none; box-shadow: 0 0 0 1px #3b82f6; }

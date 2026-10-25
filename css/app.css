@@ -73,6 +73,14 @@ legend { font-weight: 700; padding: 0 4px; }
 .field input[type=color] { width: 56px; height: 36px; padding: 0; border: 1px solid var(--line); border-radius: 6px; }
 .add-policy { width: 100%; margin-bottom: 12px; border-style: dashed; }
 
+/* PC：画面全体を使い、左の入力欄だけをスクロールする。プレビューは動かない */
+@media (min-width: 861px) {
+  body { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  .layout { flex: 1; min-height: 0; grid-template-columns: minmax(340px, 420px) 1fr; grid-template-rows: 100%; align-items: stretch; }
+  .editor { grid-column: 1; grid-row: 1; overflow-y: auto; padding-right: 4px; }
+  .preview { grid-column: 2; grid-row: 1; position: static; height: 100%; }
+}
+
 /* スマホ：プレビューを上に固定し、下で入力 */
 @media (max-width: 860px) {
   .layout { grid-template-columns: 1fr; padding: 8px 16px; }
@@ -86,7 +94,7 @@ legend { font-weight: 700; padding: 0 4px; }
 
 @media print {
   @page { size: 303mm 216mm; margin: 0; }
-  body { background: #fff; }
+  body { background: #fff; height: auto; overflow: visible; display: block; }
   .app-header, .editor, .preview-bar, .quick-edit { display: none !important; }
   .layout, .preview { display: block; padding: 0; height: auto; position: static; }
   .preview-wrap { overflow: visible; background: none; height: auto !important; }

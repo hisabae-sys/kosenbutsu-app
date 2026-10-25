@@ -4,7 +4,10 @@
   --teal-dark: #1f9c8b;
   --gold: #b9a36a;
   --ink: #231815;
-  --stripe: repeating-linear-gradient(135deg, #b8e3dd 0 1.1mm, #e6f5f2 1.1mm 2.2mm);
+  /* 背景の斜線。指定がなければテーマ色から作る */
+  --stripe-a: color-mix(in srgb, var(--teal) 32%, #fff);
+  --stripe-b: color-mix(in srgb, var(--teal) 10%, #fff);
+  --stripe: repeating-linear-gradient(135deg, var(--stripe-a) 0 1.1mm, var(--stripe-b) 1.1mm 2.2mm);
   position: relative;
   width: 303mm;
   height: 216mm;

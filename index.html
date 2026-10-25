@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>広宣物作成アプリ（試作）</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Shippori+Mincho+B1:wght@800&family=Zen+Maru+Gothic:wght@900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/komei-soto.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>広宣物作成アプリ <small>試作・公明ニュース外面</small></h1>
+    <div class="actions">
+      <button id="btn-print" type="button">印刷用に保存（仮）</button>
+      <button id="btn-export" type="button">原稿を書き出す</button>
+      <label class="button">原稿を読み込む<input id="btn-import" type="file" accept="application/json" hidden></label>
+      <button id="btn-sample" type="button">見本に戻す</button>
+    </div>
+  </header>
+  <main class="layout">
+    <section class="editor">
+      <div id="checks" class="checks" aria-live="polite"></div>
+      <form id="form" onsubmit="return false"></form>
+    </section>
+    <section class="preview">
+      <div id="preview-wrap" class="preview-wrap"><div id="sheet" class="sheet"></div></div>
+      <p class="note">入力した内容はこの端末のブラウザに保存されます。Googleドライブへの保存は次の段階で付けます。</p>
+    </section>
+  </main>
+  <script src="vendor/qrcode.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

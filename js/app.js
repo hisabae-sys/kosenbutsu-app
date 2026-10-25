@@ -1,8 +1,8 @@
 import {
   render, TEMPLATE, QR_KINDS, PHOTO_BOXES, ELEMENTS, FONTS, LABEL_FIELDS, DEFAULT_LABELS, styleAttr,
-} from './templates/komei-soto.js';
-import { removeDigitUnitSpaces, warnings, urlWarnings, DEFAULT_AGE_BASE_DATE } from './rules.js';
-import { SAMPLE } from './sample.js';
+} from './templates/komei-soto.js?v=3';
+import { removeDigitUnitSpaces, warnings, urlWarnings, DEFAULT_AGE_BASE_DATE } from './rules.js?v=3';
+import { SAMPLE } from './sample.js?v=3';
 
 const DB_NAME = 'kosenbutsu';
 const STORE = 'drafts';

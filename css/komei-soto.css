@@ -33,11 +33,11 @@
   border-top: 0.35mm dotted var(--ink); border-bottom: 0.35mm dotted var(--ink);
   padding: 0.6mm 2mm; white-space: nowrap; background: #fff;
 }
-.tokushu-left { left: 8mm; top: 12mm; font-size: 4.6mm; }
+.tokushu-left { left: 5mm; top: 9mm; font-size: 4.6mm; }
 .bubble-catch {
-  position: absolute; left: 8mm; top: 21mm; width: 33mm; height: 56mm;
+  position: absolute; left: 5mm; top: 18mm; width: 33mm; height: 56mm;
   writing-mode: vertical-rl; display: flex; flex-direction: column; justify-content: flex-start;
-  font-size: 7.4mm; font-weight: 700; color: var(--teal); line-height: 1.12;
+  font-size: calc(7.4mm * var(--fit, 1)); font-weight: 700; color: var(--teal); line-height: 1.12;
   overflow: hidden;
 }
 .bubble-catch span { display: block; }
@@ -49,20 +49,25 @@
 }
 
 /* 左面：政策とプロフィール */
-.col-right { position: absolute; left: 51mm; top: 0; width: 97.5mm; height: 210mm; background: #fff; padding: 8mm 3mm 3mm 3mm; }
+.col-right {
+  position: absolute; left: 51mm; top: 0; width: 97.5mm; height: 210mm; background: #fff; padding: 8mm 3mm 4mm 3mm;
+  display: flex; flex-direction: column;
+}
 .challenge-head {
   font-size: 5.2mm; font-weight: 700; letter-spacing: 0.6mm; text-align: center;
   border-bottom: 0.4mm solid var(--ink); padding-bottom: 1mm; margin-bottom: 2mm; white-space: nowrap;
 }
 .challenge-head .accent { color: var(--teal); }
 .challenge-head .slash { margin: 0 2mm; font-weight: 400; }
-.policy { position: relative; height: 40mm; padding-left: 8mm; overflow: hidden; }
+.policies { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 1.5mm; }
+.policy { position: relative; flex: 1 1 0; min-height: 0; display: flex; gap: 3mm; }
 .policy-no {
-  position: absolute; left: 0; top: 0; font-family: 'Shippori Mincho B1', serif; font-size: 11mm;
+  flex: none; width: 9mm; text-align: center; font-family: 'Shippori Mincho B1', serif; font-size: calc(11mm * var(--fit, 1));
   line-height: 1; color: var(--gold); font-style: italic;
 }
-.policy-title { font-size: 4.3mm; font-weight: 700; color: var(--teal); line-height: 1.28; margin-bottom: 0.8mm; }
-.policy-body { font-size: 4.6mm; line-height: 1.34; }
+.policy-text { flex: 1; min-width: 0; }
+.policy-title { font-size: calc(4.3mm * var(--fit, 1)); font-weight: 700; color: var(--teal); line-height: 1.28; margin-bottom: 0.8mm; }
+.policy-body { font-size: calc(4.6mm * var(--fit, 1)); line-height: 1.34; }
 .policy-body.with-illust { margin-right: 18mm; }
 .policy-illust { position: absolute; right: 0; bottom: 2mm; width: 17mm; height: 24mm; object-fit: contain; }
 
@@ -71,9 +76,9 @@
   font-size: 3.9mm; font-weight: 700; color: var(--teal);
 }
 .profile-head::after { content: ''; flex: 1; border-top: 0.3mm solid var(--teal); border-bottom: 0.3mm solid var(--teal); height: 0.9mm; margin-right: -3mm; }
-.profile { height: 42mm; overflow: hidden; margin-top: 1mm; }
-.profile p { font-size: 3.05mm; line-height: 1.5; padding-left: 1em; text-indent: -1em; }
-.qr-row { display: flex; gap: 11mm; padding-left: 0; margin-top: 1mm; }
+.profile { flex: none; max-height: 60mm; overflow: hidden; margin-top: 1mm; font-size: calc(3.05mm * var(--fit, 1)); line-height: 1.5; }
+.profile p { padding-left: 1em; text-indent: -1em; }
+.qr-row { flex: none; display: flex; gap: 8mm; margin-top: 2mm; min-height: 13mm; }
 .qr { position: relative; width: 13mm; height: 13mm; }
 .qr-code, .qr-code svg { width: 13mm; height: 13mm; display: block; }
 .qr-icon {
@@ -101,20 +106,20 @@
 }
 
 /* 右面：表紙。名前・帯・特集ラベルは写真より前に出す */
-.band, .tokushu, .cover-name { z-index: 1; }
+.band, .tokushu, .cover-name, .cover-catch, .masthead { z-index: 1; }
 .cover-catch { position: absolute; left: 6mm; top: 52mm; width: 136mm; height: 20mm; text-align: center; overflow: hidden; }
-.cover-catch p { font-family: 'Shippori Mincho B1', serif; font-weight: 800; font-size: 6.2mm; line-height: 1.45; }
+.cover-catch { font-family: 'Shippori Mincho B1', serif; font-weight: 800; font-size: calc(6.2mm * var(--fit, 1)); line-height: 1.45; }
 .circle { position: absolute; left: 10mm; top: 74mm; width: 150mm; height: 150mm; border-radius: 50%; background: #fff; }
 .photo-face { position: absolute; left: 72mm; top: 101mm; width: 73.5mm; height: 112mm; object-fit: cover; object-position: center top; }
 .band {
   position: absolute; left: 23.5mm; top: 81.5mm; width: 13mm; height: 97mm;
   writing-mode: vertical-rl; background: var(--teal); color: #fff; font-weight: 700;
-  font-size: 9mm; line-height: 13mm; text-align: center; letter-spacing: 0.6mm; overflow: hidden;
+  font-size: calc(9mm * var(--fit, 1)); line-height: 13mm; text-align: center; letter-spacing: 0.6mm; overflow: hidden;
 }
 .tokushu-right { left: 42.5mm; top: 93mm; font-size: 4.6mm; }
 .cover-name {
   position: absolute; left: 43mm; top: 106mm; width: 30mm; height: 76mm;
-  writing-mode: vertical-rl; font-weight: 700; font-size: 10.5mm; line-height: 1.2; overflow: hidden;
+  writing-mode: vertical-rl; font-weight: 700; font-size: calc(10.5mm * var(--fit, 1)); line-height: 1.2; overflow: hidden;
 }
 .cover-name span { display: block; }
 .cn-name { color: var(--teal); }
@@ -125,3 +130,17 @@
   position: absolute; left: 7mm; top: 197mm; width: 24mm; height: 9mm;
   border: 0.3mm dashed #c44; color: #c44; font-size: 2.6mm; display: flex; align-items: center; justify-content: center; background: #fff;
 }
+
+.logo-img { border: none; background: none; object-fit: contain; }
+.policies[data-empty] { flex: 1; }
+
+/* 仕上がり線（プレビューだけ。印刷には出さない） */
+.sheet.show-trim .trim { outline: 0.2mm dashed #e0457b; }
+.sheet.show-trim .page-left::after {
+  content: ''; position: absolute; right: 0; top: 0; bottom: 0; border-right: 0.2mm dashed #e0457b; z-index: 3;
+}
+/* デザイン設定中の要素の枠 */
+.sheet.design [data-el] { cursor: move; }
+.sheet.design [data-el]:hover { outline: 0.3mm dashed #3b82f6; }
+.sheet [data-el].selected { outline: 0.5mm solid #3b82f6 !important; }
+.sheet.design { touch-action: none; }

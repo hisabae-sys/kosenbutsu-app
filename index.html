@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Serif+JP:wght@400;700&family=Shippori+Mincho+B1:wght@800&family=Zen+Maru+Gothic:wght@500;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/app.css">
-  <link rel="stylesheet" href="css/komei-soto.css">
+  <link rel="stylesheet" href="css/app.css?v=3">
+  <link rel="stylesheet" href="css/komei-soto.css?v=3">
 </head>
 <body>
   <header class="app-header">
@@ -52,7 +52,12 @@
       <p class="note">プレビューの文字や写真を押すと、その場で編集できます（「デザイン」タブでは、押すと選択、ドラッグで移動）。入力した内容はこの端末のブラウザに保存されます。</p>
     </section>
   </main>
-  <script src="vendor/qrcode.js"></script>
-  <script type="module" src="js/app.js"></script>
+  <div id="load-error" class="load-error" hidden>アプリを読み込めませんでした。Ctrl＋Shift＋R（スマホはページの再読み込み）を試してください。</div>
+  <script>
+    // 読み込みに失敗したとき、何も起きない画面にしないための表示
+    window.addEventListener('error', function () { document.getElementById('load-error').hidden = false; });
+  </script>
+  <script src="vendor/qrcode.js?v=3"></script>
+  <script type="module" src="js/app.js?v=3" onerror="document.getElementById('load-error').hidden = false"></script>
 </body>
 </html>

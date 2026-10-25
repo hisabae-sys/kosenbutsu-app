@@ -97,3 +97,6 @@ legend { font-weight: 700; padding: 0 4px; }
   .logo-slot:not(.logo-img), .photo-empty { visibility: hidden; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+.load-error { position: fixed; left: 16px; right: 16px; top: 16px; z-index: 20; background: #fff3ee; color: var(--warn); border: 2px solid var(--warn); border-radius: 10px; padding: 12px 16px; font-weight: 700; }
+.load-error[hidden] { display: none; }

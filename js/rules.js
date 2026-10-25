@@ -1,5 +1,6 @@
 // 表記統一ルール。公明ニュース・後援会通信で決めたルールをまとめている。
 // ブラウザとテスト（Node）の両方から読み込む。
+// 古いiPhoneのSafariでも動くよう、正規表現の後読み (?<=) は使わない。
 
 export const PROFILE_MARK = '○'; // U+25CB。「〇」(U+3007) は使わない
 export const PROFILE_SEP = ' / ';
@@ -16,7 +17,7 @@ export function toFullWidthMarks(text) {
 export function removeDigitUnitSpaces(text) {
   return text
     .replace(/([0-9０-９])[ 　]+(?=[年月日歳期人回号])/g, '$1')
-    .replace(/(?<=[年月日])[ 　]+(?=[0-9０-９])/g, '');
+    .replace(/([年月日])[ 　]+(?=[0-9０-９])/g, '$1');
 }
 
 // 行頭の「〇」や「・」を「○」にそろえる
@@ -71,7 +72,7 @@ export function autoFix(text) {
 // 自動では直さず、注意だけ出すもの
 export function warnings(fieldLabel, text) {
   const out = [];
-  if (/[ 　](?=[0-9０-９])|(?<=[0-9０-９])[ 　]/.test(text)) {
+  if (/[ 　][0-9０-９]|[0-9０-９][ 　]/.test(text)) {
     out.push(`${fieldLabel}：数字の前後にスペースがあります。意図したものか確認してください`);
   }
   if (/^市立/.test(text.trim())) {

@@ -10,7 +10,7 @@ export const SAMPLE = {
   catch: '“小さな声を聴く力”で\n「大衆とともに」〇〇市を前へ',
   band: '公明党の政策推進力',
   bubble: '人を看る。\nまちを看る。\n未来を看る。',
-  photos: { face: '', full: '' },
+  photos: { face: '', full: '', logo: '' },
   policies: [
     { title: '看護師経験を活かして、\n生活習慣病の予防対策を推進!', body: '食生活の改善や運動を通じた「健康づくり」など、生活習慣病予防対策を推進し、元気に暮らせる〇〇市を目指します!', illust: '' },
     { title: '母の目線を活かし、\n子どもたちの心も体もすこやかに!', body: '食育の充実や、不登校児童への支援、SNSリテラシー教育の推進に取り組み、子どもたちが安心できる〇〇市を目指します!', illust: '' },
@@ -28,5 +28,9 @@ export const SAMPLE = {
   family: '夫、娘の3人家族',
   motto: '一期一会',
   extra: '',
+  labels: {},
+  styles: {},
+  theme: '',
+  print: { showTrim: false },
   qr: { hp: 'https://example.com/', x: '', instagram: '', facebook: '', line: '', koenkai: '' },
 };

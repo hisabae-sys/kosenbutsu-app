@@ -6,7 +6,7 @@
   <title>広宣物作成アプリ（試作）</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Shippori+Mincho+B1:wght@800&family=Zen+Maru+Gothic:wght@900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Serif+JP:wght@400;700&family=Shippori+Mincho+B1:wght@800&family=Zen+Maru+Gothic:wght@500;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/app.css">
   <link rel="stylesheet" href="css/komei-soto.css">
 </head>
@@ -14,20 +14,42 @@
   <header class="app-header">
     <h1>広宣物作成アプリ <small>試作・公明ニュース外面</small></h1>
     <div class="actions">
-      <button id="btn-print" type="button">印刷用に保存（仮）</button>
+      <button id="btn-print" type="button" class="primary">印刷用に保存（仮）</button>
       <button id="btn-export" type="button">原稿を書き出す</button>
       <label class="button">原稿を読み込む<input id="btn-import" type="file" accept="application/json" hidden></label>
       <button id="btn-sample" type="button">見本に戻す</button>
     </div>
   </header>
   <main class="layout">
-    <section class="editor">
-      <div id="checks" class="checks" aria-live="polite"></div>
-      <form id="form" onsubmit="return false"></form>
-    </section>
     <section class="preview">
-      <div id="preview-wrap" class="preview-wrap"><div id="sheet" class="sheet"></div></div>
-      <p class="note">入力した内容はこの端末のブラウザに保存されます。Googleドライブへの保存は次の段階で付けます。</p>
+      <div class="preview-bar">
+        <button type="button" id="zoom-out" aria-label="縮小">−</button>
+        <span id="zoom-label">100%</span>
+        <button type="button" id="zoom-in" aria-label="拡大">＋</button>
+        <button type="button" id="zoom-fit">全体を表示</button>
+        <button type="button" id="toggle-preview" class="mobile-only">プレビューを隠す／出す</button>
+      </div>
+      <div id="preview-wrap" class="preview-wrap"><div id="sizer" class="sizer"><div id="sheet" class="sheet"></div></div></div>
+      <div id="quick-edit" class="quick-edit" hidden>
+        <label for="qe-text">項目</label>
+        <textarea id="qe-text" rows="3"></textarea>
+        <div class="row">
+          <button type="button" class="qe-close primary">閉じる</button>
+          <button type="button" class="qe-form">入力欄で開く</button>
+        </div>
+      </div>
+    </section>
+    <section class="editor">
+      <details id="checks" class="checks" open aria-live="polite"></details>
+      <nav class="tabs">
+        <button type="button" data-tab="content" class="active">内容</button>
+        <button type="button" data-tab="design">デザイン</button>
+        <button type="button" data-tab="settings">書類の設定</button>
+      </nav>
+      <form id="tab-content" class="tab" onsubmit="return false"></form>
+      <form id="tab-design" class="tab" onsubmit="return false" hidden></form>
+      <form id="tab-settings" class="tab" onsubmit="return false" hidden></form>
+      <p class="note">プレビューの文字や写真を押すと、その場で編集できます（「デザイン」タブでは、押すと選択、ドラッグで移動）。入力した内容はこの端末のブラウザに保存されます。</p>
     </section>
   </main>
   <script src="vendor/qrcode.js"></script>

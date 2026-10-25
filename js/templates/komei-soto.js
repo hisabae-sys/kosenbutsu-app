@@ -3,7 +3,7 @@
 // 文字や写真のまとまりには data-el を付け、要素ごとの設定（styles）を重ねられるようにしている。
 import {
   autoFix, birthLine, educationText, termText, normalizeProfileMark, PROFILE_SEP,
-} from '../rules.js?v=3';
+} from '../rules.js?v=4';
 
 export const TEMPLATE = {
   id: 'komei-soto',
@@ -180,10 +180,8 @@ export function render(d, { makeQr }) {
   const qrs = QR_KINDS.filter((k) => (d.qr || {})[k.key]).map((k) => `
     <div class="qr"><div class="qr-code">${makeQr(d.qr[k.key])}</div><span class="qr-icon">${esc(k.icon)}</span></div>`).join('');
 
-  const theme = d.theme ? ` style="--teal:${esc(d.theme)}"` : '';
-
   return `
-  <div class="trim"${theme}>
+  <div class="trim">
     <section class="page page-left">
       <div class="bubble"${el('bubble')}></div>
       <div class="tokushu tokushu-left"${el('tokushu-left')}${ed('labels.tokushu')}>${esc(tokushu)}</div>

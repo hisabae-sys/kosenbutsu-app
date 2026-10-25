@@ -1,8 +1,8 @@
 import {
   render, TEMPLATE, QR_KINDS, PHOTO_BOXES, ELEMENTS, FONTS, LABEL_FIELDS, DEFAULT_LABELS, styleAttr,
-} from './templates/komei-soto.js?v=3';
-import { removeDigitUnitSpaces, warnings, urlWarnings, DEFAULT_AGE_BASE_DATE } from './rules.js?v=3';
-import { SAMPLE } from './sample.js?v=3';
+} from './templates/komei-soto.js?v=4';
+import { removeDigitUnitSpaces, warnings, urlWarnings, DEFAULT_AGE_BASE_DATE } from './rules.js?v=4';
+import { SAMPLE } from './sample.js?v=4';
 
 const DB_NAME = 'kosenbutsu';
 const STORE = 'drafts';
@@ -273,13 +273,24 @@ function buildSettings() {
       <div class="field check"><label><input type="checkbox" id="show-trim"${data.print?.showTrim ? ' checked' : ''}> プレビューに仕上がり線と折り線を出す（印刷には出ません）</label></div>
     </fieldset>
     <fieldset><legend>色</legend>
-      <div class="field"><label for="theme">テーマ色（題字・見出し・帯などの色）</label>
+      <div class="field"><label for="theme">テーマ色（題字・見出し・帯・背景の斜線などの色）</label>
         <div class="row"><input type="color" id="theme" value="${data.theme || '#2fb5a3'}">
         <button type="button" class="small" id="theme-reset">標準に戻す</button></div></div>
+      <div class="field"><label for="stripe-a">背景の斜線の色</label>
+        <div class="row"><input type="color" id="stripe-a" value="${data.stripeA || '#b8e3dd'}"><span class="muted">${data.stripeA ? '' : 'テーマ色に合わせる'}</span>
+        <button type="button" class="small" id="stripe-a-reset">標準に戻す</button></div></div>
+      <div class="field"><label for="stripe-b">背景の地の色（斜線の間）</label>
+        <div class="row"><input type="color" id="stripe-b" value="${data.stripeB || '#e6f5f2'}"><span class="muted">${data.stripeB ? '' : 'テーマ色に合わせる'}</span>
+        <button type="button" class="small" id="stripe-b-reset">標準に戻す</button></div></div>
     </fieldset>`;
   pane.querySelector('#show-trim').addEventListener('change', (e) => { set(data, 'print.showTrim', e.target.checked); update(); });
   pane.querySelector('#theme').addEventListener('input', (e) => { data.theme = e.target.value; update(); });
   pane.querySelector('#theme-reset').addEventListener('click', () => { data.theme = ''; buildSettings(); update(); });
+  [['stripe-a', 'stripeA'], ['stripe-b', 'stripeB']].forEach(([id, key]) => {
+    pane.querySelector(`#${id}`).addEventListener('input', (e) => { data[key] = e.target.value; update(); });
+    pane.querySelector(`#${id}`).addEventListener('change', () => buildSettings());
+    pane.querySelector(`#${id}-reset`).addEventListener('click', () => { data[key] = ''; buildSettings(); update(); });
+  });
 }
 
 function switchTab(name) {
@@ -406,6 +417,10 @@ function update() {
     const sheet = document.getElementById('sheet');
     sheet.innerHTML = render(data, { makeQr });
     sheet.classList.toggle('show-trim', !!data.print?.showTrim);
+    // 色の設定は用紙全体（背景の斜線を含む）にかける
+    [['--teal', data.theme], ['--stripe-a', data.stripeA], ['--stripe-b', data.stripeB]].forEach(([name, v]) => {
+      if (v) sheet.style.setProperty(name, v); else sheet.style.removeProperty(name);
+    });
     await Promise.all([...sheet.querySelectorAll('img')].map((img) => (img.complete ? null : new Promise((r) => { img.onload = img.onerror = r; }))));
     Object.keys(PHOTO_BOXES).forEach((key) => {
       const img = sheet.querySelector(`.photo-${key}`);

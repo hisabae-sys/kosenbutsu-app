@@ -36,17 +36,9 @@ button.small { font-size: 12px; padding: 4px 8px; }
 .preview-wrap { position: relative; flex: 1; min-height: 0; overflow: auto; background: #e3e8e8; border-radius: 8px; }
 .sizer { position: relative; margin: 0 auto; }
 .sizer .sheet { transform-origin: 0 0; position: absolute; left: 0; top: 0; box-shadow: 0 1px 6px rgba(0,0,0,0.25); }
-.sheet [data-edit] { cursor: text; }
-.sheet:not(.design) [data-edit]:hover { outline: 0.3mm dashed #f59e0b; }
 .editor { min-width: 0; }
 .note { font-size: 12px; color: var(--muted); }
 .mobile-only { display: none; }
-
-.quick-edit {
-  background: var(--panel); border: 2px solid var(--accent); border-radius: 10px; padding: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.18);
-}
-.quick-edit label { display: block; font-weight: 700; font-size: 13px; margin-bottom: 4px; }
-.quick-edit textarea { width: 100%; font: inherit; font-size: 16px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 6px; }
 
 .checks { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; }
 .checks summary { font-weight: 700; cursor: pointer; }
@@ -55,10 +47,20 @@ button.small { font-size: 12px; padding: 4px 8px; }
 .checks .ok { color: var(--accent); }
 .checks ul { margin: 4px 0; padding-left: 20px; }
 
-.tabs { display: flex; gap: 4px; margin-bottom: 8px; position: sticky; top: 0; background: var(--bg); padding: 4px 0; z-index: 2; }
-.tabs button { flex: 1; border-radius: 8px 8px 0 0; }
-.tabs button.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
-
+/* 編集欄：カテゴリー → 項目（押すと開く） */
+.group h2 { font-size: 14px; color: var(--muted); margin: 16px 0 6px; }
+.item { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px; transition: box-shadow 0.3s; }
+.item.open { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(31,156,139,0.25); }
+.item-head { display: flex; width: 100%; align-items: center; gap: 6px; border: none; background: none; text-align: left; font-weight: 700; padding: 10px 12px; }
+.item-head:hover { background: #fff8eb; }
+.item-head .chev { margin-left: auto; color: var(--muted); font-size: 11px; }
+.changed { color: #f59e0b; font-weight: 700; margin-left: 4px; }
+.item-body { padding: 0 12px 10px; }
+details.design { border-top: 1px dashed var(--line); margin-top: 8px; padding-top: 6px; }
+details.design summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--accent); padding: 4px 0; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+.grid .field { margin: 6px 0; }
+.policy-set.focus { box-shadow: 0 0 0 3px #f59e0b; }
 fieldset { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin: 0 0 12px; padding: 10px 14px; transition: box-shadow 0.3s; }
 fieldset.flash { box-shadow: 0 0 0 3px #f59e0b; }
 legend { font-weight: 700; padding: 0 4px; }
@@ -88,19 +90,17 @@ legend { font-weight: 700; padding: 0 4px; }
   .preview-wrap { flex: none; }
   body.preview-collapsed .preview-wrap { display: none; }
   .mobile-only { display: inline-block; }
-  .quick-edit { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 10; }
-  .tabs { position: static; }
 }
 
 @media print {
   @page { size: 303mm 216mm; margin: 0; }
   body { background: #fff; height: auto; overflow: visible; display: block; }
-  .app-header, .editor, .preview-bar, .quick-edit { display: none !important; }
+  .app-header, .editor, .preview-bar, .sel-handle { display: none !important; }
   .layout, .preview { display: block; padding: 0; height: auto; position: static; }
   .preview-wrap { overflow: visible; background: none; height: auto !important; }
   .sizer { width: auto !important; height: auto !important; }
   .sizer .sheet { position: static; transform: none !important; box-shadow: none; }
-  .sheet .selected, .sheet [data-el]:hover, .sheet [data-edit]:hover { outline: none !important; }
+  .sheet .selected, .sheet [data-el]:hover, .sheet [data-el].hl { outline: none !important; }
   .sheet.show-trim .trim, .sheet.show-trim .page-left::after { outline: none; border: none; }
   .logo-slot:not(.logo-img), .photo-empty { visibility: hidden; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }

@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Serif+JP:wght@400;700&family=Shippori+Mincho+B1:wght@800&family=Zen+Maru+Gothic:wght@500;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/app.css?v=4">
-  <link rel="stylesheet" href="css/komei-soto.css?v=4">
+  <link rel="stylesheet" href="css/app.css?v=5">
+  <link rel="stylesheet" href="css/komei-soto.css?v=5">
 </head>
 <body>
   <header class="app-header">
@@ -30,26 +30,11 @@
         <button type="button" id="toggle-preview" class="mobile-only">プレビューを隠す／出す</button>
       </div>
       <div id="preview-wrap" class="preview-wrap"><div id="sizer" class="sizer"><div id="sheet" class="sheet"></div></div></div>
-      <div id="quick-edit" class="quick-edit" hidden>
-        <label for="qe-text">項目</label>
-        <textarea id="qe-text" rows="3"></textarea>
-        <div class="row">
-          <button type="button" class="qe-close primary">閉じる</button>
-          <button type="button" class="qe-form">入力欄で開く</button>
-        </div>
-      </div>
     </section>
     <section class="editor">
       <details id="checks" class="checks" open aria-live="polite"></details>
-      <nav class="tabs">
-        <button type="button" data-tab="content" class="active">内容</button>
-        <button type="button" data-tab="design">デザイン</button>
-        <button type="button" data-tab="settings">書類の設定</button>
-      </nav>
-      <form id="tab-content" class="tab" onsubmit="return false"></form>
-      <form id="tab-design" class="tab" onsubmit="return false" hidden></form>
-      <form id="tab-settings" class="tab" onsubmit="return false" hidden></form>
-      <p class="note">プレビューの文字や写真を押すと、その場で編集できます（「デザイン」タブでは、押すと選択、ドラッグで移動）。入力した内容はこの端末のブラウザに保存されます。</p>
+      <div id="panel" class="panel"></div>
+      <p class="note">プレビューの文字や写真を押すと、その項目の「内容」と「デザイン」が開きます。選んだ要素はドラッグで移動、右下の■をドラッグで大きさを変えられます。入力した内容はこの端末のブラウザに保存されます。</p>
     </section>
   </main>
   <div id="load-error" class="load-error" hidden>アプリを読み込めませんでした。Ctrl＋Shift＋R（スマホはページの再読み込み）を試してください。</div>
@@ -57,7 +42,7 @@
     // 読み込みに失敗したとき、何も起きない画面にしないための表示
     window.addEventListener('error', function () { document.getElementById('load-error').hidden = false; });
   </script>
-  <script src="vendor/qrcode.js?v=4"></script>
-  <script type="module" src="js/app.js?v=4" onerror="document.getElementById('load-error').hidden = false"></script>
+  <script src="vendor/qrcode.js?v=5"></script>
+  <script type="module" src="js/app.js?v=5" onerror="document.getElementById('load-error').hidden = false"></script>
 </body>
 </html>
